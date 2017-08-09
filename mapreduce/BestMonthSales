@@ -1,0 +1,85 @@
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.TreeMap;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+
+
+
+public class Query2 {
+	public static class mapper1 extends Mapper<LongWritable,Text,Text,FloatWritable>    //key=0 value= aaa,10000,male
+	{
+		public void map(LongWritable key,Text value,Context context) throws IOException, InterruptedException
+		{
+			String str[]=value.toString().split(",");   //str[0]=aaa, str[1]=sal str[2]=male
+			
+				context.write(new Text(str[1].substring(0,2)), new FloatWritable(Float.parseFloat(str[3])));   //male sal	
+			
+			
+			
+			
+		}
+		
+	}
+	public static class MyReducer extends Reducer<Text,FloatWritable,Text,Text>
+	{
+		TreeMap<Float,String> hm=new TreeMap<Float, String>();
+		public void reduce(Text key,Iterable<FloatWritable> value,Context context) throws IOException, InterruptedException
+		{
+			float sum=0.0f;
+			for(FloatWritable a:value)
+			{
+				sum=sum+a.get();
+			}
+			hm.put(sum,key.toString());
+			if(hm.size()>1)
+			{
+				hm.remove(hm.firstKey());
+				
+			
+						
+			}
+			
+							
+		}
+		protected void cleanup(Context context) throws IOException, InterruptedException
+		{
+			context.write(new Text(""),new Text(hm.toString()));		
+				
+		}
+		
+	}
+		
+	public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+		Configuration cfg=new Configuration();
+		Job job=Job.getInstance(cfg,"word count");
+		job.setJarByClass(Query2.class);
+		job.setMapperClass(mapper1.class);
+		job.setReducerClass(MyReducer.class);
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(FloatWritable.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(Text.class);
+		
+		FileInputFormat.addInputPath(job,new Path(args[0]));   //abc
+		 FileSystem.get(cfg).delete(new Path(args[1]),true);
+		FileOutputFormat.setOutputPath(job,new Path(args[1]));
+		  System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+
+	}
+
+}
