@@ -1,0 +1,72 @@
+
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class O8 {
+	public static class myclass extends Mapper<LongWritable,Text,Text,Text>
+	{
+		public void map(LongWritable key,Text value,Context context) throws IOException,InterruptedException
+		{
+			String arr[] = value.toString().split("\t");
+		
+			context.write(new Text(arr[0]),new Text(arr[0]));
+		}
+	}
+public static class myreducer extends Reducer<Text,Text,Text,IntWritable>
+	{
+		Text maxWord = new Text();
+		private int max = 0; 
+
+		public void reduce(Text key,Iterable<Text> values,Context context) throws IOException,InterruptedException
+		{
+			int count = 0; 
+			for(Text a:values)
+			{
+		
+		count++;
+				}
+			if(count > max)
+		    {
+		        max = count;
+		       
+		    }
+			 maxWord.set(key);
+			}
+		
+	protected void cleanup(Context context) throws IOException, InterruptedException {
+	      context.write(maxWord, new IntWritable(max));
+	  }
+	}
+
+	public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+		Configuration conf = new Configuration();
+		Job job = Job.getInstance(conf,"jj");
+		job.setJarByClass(O8.class);
+		job.setMapperClass(myclass.class);
+		//job.setNumReduceTasks(0);
+		job.setReducerClass(myreducer.class);
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(Text.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileSystem.get(conf).delete(new Path(args[1]),true);
+		FileOutputFormat.setOutputPath(job,new Path(args[1]));
+		System.exit(job.waitForCompletion(true)?0:1);
+	}
+
+}
