@@ -1,0 +1,143 @@
+
+import java.io.IOException;
+import java.util.TreeMap;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+//import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+
+
+
+
+
+public class O3
+{
+	public static class Myclass extends Mapper<LongWritable,Text,Text,Text>
+	{
+		public void map(LongWritable key,Text value,Context context) throws IOException,InterruptedException
+		{
+			String arr[] = value.toString().split("\t");
+			
+			context.write(new Text(arr[2]), value);
+		
+		}
+	}
+		public static class Myreducer extends Reducer<Text,Text,NullWritable,Text>
+	{
+		private TreeMap<Integer,Text>  hs = new TreeMap<Integer,Text>();
+		private TreeMap<Integer,Text>  hs1 = new TreeMap<Integer,Text>();
+		private TreeMap<Integer,Text>  hs2 = new TreeMap<Integer,Text>();
+		private TreeMap<Integer,Text>  hs3 = new TreeMap<Integer,Text>();
+		private TreeMap<Integer,Text>  hs4 = new TreeMap<Integer,Text>();
+		private TreeMap<Integer,Text>  hs5 = new TreeMap<Integer,Text>();
+		private TreeMap<Integer,Text>  hs6 = new TreeMap<Integer,Text>();
+
+		public void reduce(Text key,Iterable<Text> values,Context context) throws IOException,InterruptedException
+		{
+			int count=0;
+			String year ="";
+			String myval = key.toString();
+			for(Text val :values)
+			{
+				String ss[] = val.toString().split("\t");
+				count++;
+				 year = ss[3];
+			}
+			 myval = year+','+ myval+','+count;
+			 if(year.equals("2000"))                        //year 2000 details
+				{
+					hs6.put(count,new Text(myval));
+				
+					}
+				
+			if(year.equals("2002"))                        //year 2002 details
+			{
+				hs.put(count,new Text(myval));
+			
+				}
+			
+			if(year.equals("2004"))                         // year 2004 details
+			{
+				hs1.put(count,new Text(myval));
+			}
+			if(year.equals("2006"))                           // year 2006 details
+			{
+				hs2.put(count,new Text(myval));
+			
+			}
+			if(year.equals("2008"))                           //year 2008 details
+			{
+				hs3.put(count, new Text(myval));
+			
+			}
+			if(year.equals("2010"))                             //year 2010 details
+			{
+				hs4.put(count,new Text(myval));
+
+			}
+			if(year.equals("2012"))                               //year 2012 details
+			{
+				hs5.put(count,new Text(myval));
+				
+			}}
+			
+			public void cleanup(Context context) throws IOException,InterruptedException
+			{
+				for(Text val:hs6.descendingMap().values())
+				{
+					context.write(NullWritable.get(), val);
+				}
+
+				for(Text val:hs.descendingMap().values())
+				{
+					context.write(NullWritable.get(), val);
+				}
+				for(Text bl:hs1.descendingMap().values())
+				{
+					context.write(NullWritable.get(),bl);
+				}
+				for(Text bl:hs2.descendingMap().values())
+				{
+					context.write(NullWritable.get(),bl);
+				}for(Text bl:hs3.descendingMap().values())
+				{
+					context.write(NullWritable.get(),bl);
+				}for(Text bl:hs4.descendingMap().values())
+				{
+					context.write(NullWritable.get(),bl);
+				}for(Text bl:hs5.descendingMap().values())
+				{
+					context.write(NullWritable.get(),bl);
+				}
+			}
+		}
+	public  static void main(String []args) throws Exception
+	{
+		Configuration conf = new Configuration();
+		Job job = Job.getInstance(conf, "job name");
+		job.setJarByClass(O3.class);
+	
+		job.setMapperClass(Myclass.class);
+		job.setReducerClass(Myreducer.class);
+		job.setNumReduceTasks(7);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileSystem.get(conf).delete(new Path(args[1]),true);
+		FileOutputFormat.setOutputPath(job,new Path(args[1]));
+		System.exit(job.waitForCompletion(true)?0:1);
+		
+	}}
