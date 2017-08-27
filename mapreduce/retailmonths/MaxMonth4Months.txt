@@ -1,0 +1,96 @@
+package Retail;
+
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.TreeMap;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class MaxMonth4Month {
+	public static class myclass extends Mapper<LongWritable,Text,Text,Text>
+	{
+		public void map(LongWritable key,Text value,Context context) throws IOException,InterruptedException
+		{
+			String arr[] = value.toString().split(";");
+			String date=arr[0].substring(8, 10);
+			String id=arr[1].substring(0, 8);
+			String sales=arr[8];
+			context.write(new Text(date),new Text(id+" "+sales));
+		}
+	}
+	
+	public static class myreducer extends Reducer<Text,Text,NullWritable,Text>
+	{
+		
+		TreeMap<Integer,String> tm=new TreeMap();
+		public void reduce(Text key,Iterable<Text> values,Context context) throws IOException,InterruptedException
+		{
+			HashMap<String,Integer> hm=new HashMap();
+			for(Text a : values)
+			{
+				String str[]=a.toString().split(" ");
+				String id=str[0];
+				int sales=Integer.parseInt(str[1]);
+				if(hm.containsKey(id))
+				{
+					int existingsales=hm.get(id);
+					hm.put(id, existingsales+sales);
+				}
+				else
+				{
+				hm.put(id, sales);
+				}
+			}
+			for(Map.Entry<String,Integer> entry:hm.entrySet())
+			{
+				String id=entry.getKey();
+				int sales=entry.getValue();
+				tm.put(sales,key+","+id);
+				if(tm.size()>1)
+				{
+					tm.remove(tm.firstKey());
+				}
+			}
+			
+		}
+	public void cleanup(Context context) throws IOException, InterruptedException
+	{
+		context.write(NullWritable.get(), new Text(tm.toString()));
+	}
+	}
+			
+			
+	public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+		
+		Configuration conf = new Configuration();
+		Job job = Job.getInstance(conf,"jj");
+		job.setJarByClass(MaxMonth4Month.class);
+		job.setMapperClass(myclass.class);
+	job.setReducerClass(myreducer.class);
+	//	job.setNumReduceTasks(0);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(Text.class);
+		job.setOutputKeyClass(NullWritable.class);
+		job.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileSystem.get(conf).delete(new Path(args[1]),true);
+		FileOutputFormat.setOutputPath(job,new Path(args[1]));
+		System.exit(job.waitForCompletion(true)?0:1);
+	}
+
+	}
+
