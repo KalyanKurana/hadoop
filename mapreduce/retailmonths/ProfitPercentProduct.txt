@@ -1,0 +1,78 @@
+package Retail;
+
+
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class PPercentagePro {
+	public static class myclass extends Mapper<LongWritable,Text,Text,Text>
+	{
+		public void map(LongWritable key,Text value,Context context) throws IOException,InterruptedException
+		{
+			String arr[] = value.toString().split(";");
+			String proid=arr[5];
+			long sp=Long.parseLong(arr[8]);
+			long cp=Long.parseLong(arr[7]);
+			long profit=(sp-cp);
+			context.write(new Text(proid),new Text(String.valueOf(profit)+","+new Text(String.valueOf(cp))));
+		}
+	}
+	
+	public static class myreducer extends Reducer<Text,Text,Text,Text>
+	{
+		
+		
+		public void reduce(Text key,Iterable<Text> values,Context context) throws IOException,InterruptedException
+		{
+			float percent=0.0f;
+			float profit=0.0f,cp=0.0f;
+		
+			for(Text a : values)
+			{
+				String str[]=a.toString().split(",");
+				profit=Float.parseFloat(str[0]);
+				cp=Float.parseFloat(str[1]);
+				
+				 
+			}
+			percent=((profit)/cp)*100;
+			context.write(new Text(key), new Text(String.valueOf(percent)));
+		}
+	
+	}
+			
+			
+	public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+		
+		Configuration conf = new Configuration();
+		Job job = Job.getInstance(conf,"jj");
+		job.setJarByClass(PPercentagePro.class);
+		job.setMapperClass(myclass.class);
+	job.setReducerClass(myreducer.class);
+	//	job.setNumReduceTasks(0);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(Text.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileSystem.get(conf).delete(new Path(args[1]),true);
+		FileOutputFormat.setOutputPath(job,new Path(args[1]));
+		System.exit(job.waitForCompletion(true)?0:1);
+	}
+
+	}
+
+
