@@ -1,0 +1,62 @@
+package Retail;
+
+
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+
+
+public class Student {
+	public static class mapper1 extends Mapper<LongWritable, Text, Text, IntWritable> // key=0
+													// value=aaa,10000,male
+{
+public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+	String str[] = value.toString().split(","); // str[0]=aaa,
+												// str[1]=sal,str[2]=male
+	context.write(new Text(str[3]),new IntWritable(Integer.parseInt(str[2])));
+}
+}
+	public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+public void reduce(Text key, Iterable<IntWritable> value,Context context) throws IOException, InterruptedException {
+	int count = 0, sum = 0, avg = 0;
+	for (IntWritable a : value) {
+		count++;
+		sum += a.get();
+	}
+	avg = sum / count;
+	context.write(key, new IntWritable(avg));
+}
+}
+
+
+	public static void main(String[] args) throws IOException,ClassNotFoundException, InterruptedException {
+		
+		Configuration cfg = new Configuration();
+		Job job = Job.getInstance(cfg, "wordcount");
+		job.setJarByClass(Student.class);
+		job.setMapperClass(mapper1.class);
+		job.setCombinerClass(MyReducer.class);
+		job.setReducerClass(MyReducer.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(IntWritable.class);
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileSystem.get(cfg).delete(new Path(args[1]), true);
+		FileOutputFormat.setOutputPath(job, new Path(args[1]));
+		System.exit(job.waitForCompletion(true) ? 0 : 1);
+
+	}
+
+}
