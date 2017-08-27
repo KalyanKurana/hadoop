@@ -1,0 +1,70 @@
+package Retail;
+
+
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class ProfitCat {
+	public static class myclass extends Mapper<LongWritable,Text,Text,LongWritable>
+	{
+		public void map(LongWritable key,Text value,Context context) throws IOException,InterruptedException
+		{
+			String arr[] = value.toString().split(";");
+			String procat=arr[4];
+			long sp=Long.valueOf(arr[8]);
+			long cp=Long.valueOf(arr[7]);
+			long profit=(sp-cp);
+			context.write(new Text(procat),new LongWritable(profit));
+		}
+	}
+	
+	public static class myreducer extends Reducer<Text,LongWritable,Text,Text>
+	{
+		
+		
+		public void reduce(Text key,Iterable<LongWritable> values,Context context) throws IOException,InterruptedException
+		{
+		String profit="";
+			for(LongWritable a : values)
+			{
+				 profit=a.toString();
+			}
+			context.write(new Text(key), new Text(profit));
+		}
+	
+	}
+			
+			
+	public static void main(String[] args) throws IOException, ClassNotFoundException, InterruptedException {
+		
+		Configuration conf = new Configuration();
+		Job job = Job.getInstance(conf,"jj");
+		job.setJarByClass(ProfitCat.class);
+		job.setMapperClass(myclass.class);
+	job.setReducerClass(myreducer.class);
+	//	job.setNumReduceTasks(0);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(LongWritable.class);
+		job.setOutputKeyClass(Text.class);
+		job.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(job, new Path(args[0]));
+		FileSystem.get(conf).delete(new Path(args[1]),true);
+		FileOutputFormat.setOutputPath(job,new Path(args[1]));
+		System.exit(job.waitForCompletion(true)?0:1);
+	}
+
+	}
+
