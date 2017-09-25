@@ -1,0 +1,50 @@
+FirstFile = load '/home/hduser/Downloads/2000.txt' using PigStorage(',') as (cid:chararray, cname:chararray, m1:double,m2:double,m3:double,m4:double,m5:double,m6:double,m7:double,m8:double,m9:double,m10:double,m11:double,m12:double);
+
+FirstFile_YearlySales = foreach FirstFile GENERATE $0 as cid,$1 as cname,$2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10 + $11 + $12 + $13 as YearlySales;
+
+SecondFile = load '/home/hduser/Downloads/2001.txt' using PigStorage(',') as (cid:chararray, cname:chararray, m1:double,m2:double,m3:double,m4:double,m5:double,m6:double,m7:double,m8:double,m9:double,m10:double,m11:double,m12:double);
+
+
+SecondFile_YearlySales = foreach SecondFile GENERATE $0 as cid,$1 as cname,$2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10 + $11 + $12 + $13 as YearlySales;
+
+
+ThirdFile = load '/home/hduser/Downloads/2002.txt' using PigStorage(',') as (cid:chararray, cname:chararray, m1:double,m2:double,m3:double,m4:double,m5:double,m6:double,m7:double,m8:double,m9:double,m10:double,m11:double,m12:double);
+
+ThirdFile_YearlySales = foreach ThirdFile GENERATE $0 as cid,$1 as cname,$2 + $3 + $4 + $5 + $6 + $7 + $8 + $9 + $10 + $11 + $12 + $13 as YearlySales;
+
+TotalSales = JOIN FirstFile_YearlySales BY cid,SecondFile_YearlySales BY cid,ThirdFile_YearlySales BY cid;
+
+
+FirstGrowthCycle = foreach TotalSales GENERATE $0 as cid, $1 as cname, ((($5 - $2)/$2) * 100) as FirstGrowthCycle_Value;
+
+SecondGrowthCycle = foreach TotalSales GENERATE $0 as cid, $1 as cname,((($8 - $5)/$5) * 100) as SecondGrowthCycle_Value;
+
+TotalGrowthCycle = JOIN FirstGrowthCycle BY cid,SecondGrowthCycle BY cid;
+
+SalesAvg = foreach TotalGrowthCycle GENERATE $0 AS cid, $1 AS cname, ($2 + $5)/2 as AverageSales;
+
+AvgSaleAboveTen = FILTER SalesAvg by AverageSales>= 10;
+
+STORE AvgSaleAboveTen INTO '/home/hduser/niit/pig/AvgAboveTen11' USING PigStorage(',');
+
+AvgSaleBelowFive = FILTER SalesAvg by AverageSales<= -5;
+
+
+STORE AvgSaleBelowFive INTO '/home/hduser/niit/pig/AvgBelowFive11' USING PigStorage(',');
+
+ThreeYearSales = foreach TotalSales GENERATE $0 as cid,$1 as cname,$2 + $5 + $8 as TotalSales;
+
+TopFiveSelling = LIMIT (order ThreeYearSales BY TotalSales desc) 5;
+
+STORE TopFiveSelling INTO '/home/hduser/niit/pig/TopFiveSelling1' USING PigStorage(',');
+
+
+BottomFiveSelling = LIMIT (order ThreeYearSales BY TotalSales ) 5;
+
+
+STORE BottomFiveSelling INTO '/home/hduser/niit/pig/BottomFiveSelling1' USING PigStorage(',');
+
+
+
+
+
